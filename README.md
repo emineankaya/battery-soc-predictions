@@ -6,7 +6,15 @@ https://img.shields.io/badge/Machine-Learning-orange.svg
 
 📖 Proje Özeti
 Elektrikli araç bataryalarının Şarj Durumu (State of Charge - SOC) tahminini yapan makine öğrenmesi tabanlı bir sistem. NASA'nın lityum iyon batarya veri setleri kullanılarak geliştirilmiştir.
+🔋 Elektrikli Araç SOC Tahmin Sistemi
+Bu proje, NASA batarya veri setlerini kullanarak elektrikli araç bataryalarının State of Charge (SOC) tahminini yapan kapsamlı bir makine öğrenmesi sistemidir.
+🎯 Proje Amacı
 
+NASA'nın B0005, B0006, B0018 batarya veri setlerini analiz etme
+Batarya SOC değerini yüksek doğrulukla tahmin eden modeller geliştirme
+REST API ile tahmin servisini sunma
+Kullanıcı dostu web arayüzü ile demo sağlama
+Docker ile kolay dağıtım
 🎯 Özellikler
 🤖 ML Modeli: RandomForest ile SOC tahmini
 
@@ -37,6 +45,81 @@ battery_soc_project/
 ├── 🐳 Dockerfile.frontend        # Frontend container
 ├── 🐳 docker-compose.yml         # Orchestration
 └── 📄 requirements.txt           Python bağımlılıkları
+
+1. Gereksinimler
+
+Python 3.9+
+Node.js 18+
+Docker & Docker Compose
+4GB+ RAM
+
+2. Veri Setini İndirin
+NASA Prognostics Center'dan B0005, B0006, B0018 dosyalarını indirin:
+
+https://ti.arc.nasa.gov/tech/dash/groups/pcoe/prognostic-data-repository/
+
+Dosyaları data/raw/ klasörüne koyun.
+3. Python Ortamı Kurulumu
+bash# Sanal ortam oluştur
+python -m venv venv
+
+# Aktif et
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate     # Windows
+
+# Gereksinimler yükle
+pip install -r requirements.txt
+4. Veri İşleme ve Model Eğitimi
+bash# Veri ön işleme
+cd src
+python data_preprocessing.py
+
+# Keşifsel veri analizi
+python eda.py
+
+# Model eğitimi
+python model.py
+5. API ve Frontend Başlatma
+bash# API başlat (terminal 1)
+python api.py
+
+# Frontend başlat (terminal 2)
+cd ../frontend
+npm install
+npm start
+6. Docker ile Çalıştırma
+bash# Tüm servisleri başlat
+docker-compose up --build
+
+# Sadece belirli servisleri başlat
+docker-compose up soc-api soc-frontend
+🌐 Servis URL'leri
+
+Frontend Demo: http://localhost:3000
+REST API: http://localhost:5000
+API Dokümantasyon: http://localhost:5000
+MQTT Broker: localhost:1883
+
+📊 API Kullanımı
+SOC Tahmini
+bashcurl -X POST http://localhost:5000/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "features": [2.100, 3.800, 25.5, -1.500, 4.100, 2.500]
+  }'
+Toplu Tahmin
+bashcurl -X POST http://localhost:5000/batch-predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "batch_features": [
+      [2.100, 3.800, 25.5, -1.500, 4.100, 2.500],
+      [2.050, 3.750, 24.8, -1.450, 4.050, 2.450]
+    ]
+  }'
+Sağlık Kontrolü
+bashcurl http://localhost:5000/health
+
+
 🚀 Kurulum ve Çalıştırma
 1. Docker ile (Önerilen)
 bash
