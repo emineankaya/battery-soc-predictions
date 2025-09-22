@@ -1,0 +1,35 @@
+services:
+  soc-api:
+    build: .
+    container_name: battery-soc-api
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./models:/app/models
+      - ./reports:/app/reports
+      - ./logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FLASK_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  soc-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: battery-soc-frontend
+    ports:
+      - "3001:3000"
+    environment:
+      - API_URL=http://soc-api:5000  # 👈 BURAYA EKLEYİN
+    depends_on:
+      - soc-api
+    restart: unless-stopped
+    volumes:
+      - ./frontend:/app/frontend

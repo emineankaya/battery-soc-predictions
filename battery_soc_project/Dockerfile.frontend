@@ -1,0 +1,18 @@
+# Node.js base image
+FROM node:18-alpine
+
+# Çalışma dizini oluştur
+WORKDIR /app
+
+# Frontend dosyalarını kopyala
+COPY frontend/ ./frontend/
+
+# Bağımlılıkları yükle
+WORKDIR /app/frontend
+RUN npm install
+
+# Port açığa çıkar
+EXPOSE 3000
+
+# Uygulamayı başlat
+CMD ["node", "app.js"]

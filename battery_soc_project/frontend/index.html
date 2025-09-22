@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOC Tahmin Uygulaması</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .form-group { margin-bottom: 15px; }
+        input, textarea { padding: 8px; margin: 5px 0; }
+        input { width: 300px; }
+        textarea { width: 100%; height: 100px; }
+        button { padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .result { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px; }
+        .health-status { padding: 10px; margin-bottom: 20px; border-radius: 5px; }
+        .healthy { background: #d4edda; color: #155724; }
+        .unhealthy { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔋 SOC Tahmin Uygulaması</h1>
+        
+        <div id="health-status" class="health-status">API durumu kontrol ediliyor...</div>
+        
+        <h2>Tekli Tahmin</h2>
+        <div class="form-group">
+            <label>Özellikler (virgülle ayırın):</label><br>
+            <input type="text" id="features" placeholder="3.7, 4.2, 25">
+            <button onclick="predict()">Tahmin Et</button>
+        </div>
+        
+        <div id="prediction-result" class="result"></div>
+        
+        <h2>Toplu Tahmin</h2>
+        <div class="form-group">
+            <label>Toplu özellikler (her satıra bir özellik seti):</label><br>
+            <textarea id="batch-features" placeholder="3.7,4.2,25&#10;3.6,4.1,24"></textarea>
+            <button onclick="batchPredict()">Toplu Tahmin Et</button>
+        </div>
+        
+        <div id="batch-prediction-result" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = ''; // Proxy üzerinden istek yapacağız
+        
+        // Sayfa yüklendiğinde health check yap
+        async function checkHealth() {
+            const healthElement = document.getElementById('health-status');
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                
+                if (data.status === 'healthy') {
+                    healthElement.className = 'health-status healthy';
+                    healthElement.innerHTML = `
+                        <p><strong>✅ API Durumu:</strong> Sağlıklı</p>
+                        <p><strong>🤖 Model:</strong> ${data.model_name || 'Bilinmiyor'}</p>
+                        <p><strong>📊 Doğruluk:</strong> ${data.model_metrics?.accuracy ? (data.model_metrics.accuracy * 100).toFixed(2) + '%' : 'Bilinmiyor'}</p>
+                    `;
+                } else {
+                    healthElement.className = 'health-status unhealthy';
+                    healthElement.innerHTML = `
+                        <p><strong>❌ API Durumu:</strong> Sağlıksız</p>
+                        <p>Model yüklenmemiş veya API erişilemiyor</p>
+                    `;
+                }
+            } catch (error) {
+                healthElement.className = 'health-status unhealthy';
+                healthElement.innerHTML = `
+                    <p><strong>❌ API Bağlantı Hatası:</strong></p>
+                    <p>${error.message}</p>
+                    <p>API'nin çalıştığından emin olun: <code>http://localhost:5000</code></p>
+                `;
+            }
+        }
+        
+        // Tekli tahmin
+        async function predict() {
+            const featuresInput = document.getElementById('features').value;
+            const features = featuresInput.split(',').map(f => parseFloat(f.trim()));
+            
+            const resultElement = document.getElementById('prediction-result');
+            resultElement.innerHTML = '<p>⏳ Tahmin yapılıyor...</p>';
+            
+            try {
+                const response = await fetch('/api/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ features })
+                });
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    resultElement.innerHTML = `
+                        <p><strong>✅ Tahmin Edilen SOC:</strong> ${data.predicted_soc}%</p>
+                        <p><strong>🤖 Model:</strong> ${data.model_name}</p>
+                        <p><strong>⏰ Zaman:</strong> ${new Date(data.timestamp).toLocaleString('tr-TR')}</p>
+                    `;
+                } else {
+                    resultElement.innerHTML = `<p style="color: red;">❌ Hata: ${data.error}</p>`;
+                }
+            } catch (error) {
+                resultElement.innerHTML = `<p style="color: red;">❌ İstek hatası: ${error.message}</p>`;
+            }
+        }
+        
+        // Toplu tahmin
+        async function batchPredict() {
+            const batchInput = document.getElementById('batch-features').value;
+            const batchFeatures = batchInput.split('\n')
+                .filter(line => line.trim())
+                .map(line => line.split(',').map(f => parseFloat(f.trim())));
+            
+            if (batchFeatures.length === 0) {
+                document.getElementById('batch-prediction-result').innerHTML = 
+                    '<p style="color: red;">❌ Lütfen geçerli veri girin</p>';
+                return;
+            }
+            
+            const resultElement = document.getElementById('batch-prediction-result');
+            resultElement.innerHTML = '<p>⏳ Toplu tahmin yapılıyor...</p>';
+            
+            try {
+                const response = await fetch('/api/batch-predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ batch_features: batchFeatures })
+                });
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    let html = '<p><strong>✅ Toplu Tahmin Sonuçları:</strong></p>';
+
+                    // Kullanıcının girdiği ham veriyi al
+                    const batchInput = document.getElementById('batch-features').value;
+                    const batchFeatures = batchInput.split('\n')
+                        .filter(line => line.trim())
+                        .map(line => line.split(',').map(f => parseFloat(f.trim())));
+
+                    data.predictions.forEach((pred, index) => {
+                        if (pred.status === 'success') {
+                            const features = batchFeatures[index];
+                            html += `
+                                <p>📊 ${index + 1}. Tahmin: <strong>${pred.predicted_soc}%</strong> → 
+                                [${features[0]}V, ${features[1]}A, ${features[2]}°C, ${features[3]}s]</p>
+                            `;
+                        } else {
+                            html += `<p style="color: red;">❌ ${index + 1}. veri hatası: ${pred.error}</p>`;
+                        }
+                    });
+                    resultElement.innerHTML = html;
+                } else {
+                    resultElement.innerHTML = `<p style="color: red;">❌ Hata: ${data.error}</p>`;
+                }
+            } catch (error) {
+                resultElement.innerHTML = `<p style="color: red;">❌ İstek hatası: ${error.message}</p>`;
+            }
+        }
+        
+        // Sayfa yüklendiğinde health kontrolü yap
+        document.addEventListener('DOMContentLoaded', checkHealth);
+    </script>
+</body>
+</html>

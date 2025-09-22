@@ -1,0 +1,13 @@
+{
+  "name": "soc-frontend",
+  "version": "1.0.0",
+  "description": "SOC Tahmin Frontend",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node app.js"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  }
+}
